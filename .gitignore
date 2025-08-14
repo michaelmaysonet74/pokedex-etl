@@ -23,3 +23,5 @@ pokedex_etl-*.tar
 /tmp/
 
 .DS_Store
+
+pokedex_etl
