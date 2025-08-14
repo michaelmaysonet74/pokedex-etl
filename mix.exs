@@ -23,7 +23,9 @@ defmodule PokedexETL.MixProject do
       {:ecto_sql, "~> 3.11"},
       {:postgrex, ">= 0.0.0"},
       {:neuron, "~> 5.1"},
-      {:jason, "~> 1.4"}
+      {:jason, "~> 1.4"},
+      {:pokedex_schema,
+       git: "https://github.com/michaelmaysonet74/pokedex-schema.git", tag: "v0.1.0"}
     ]
   end
 end
