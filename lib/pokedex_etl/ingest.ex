@@ -22,20 +22,23 @@ defmodule PokedexETL.Ingest do
         {:error, :invalid_input}
 
       ids ->
-        inserted_count = ingest_pokemon_by_ids(ids)
+        inserted_count = ingest_pokemon_by_ids(ids, gen)
         {:ok, "Inserted #{inserted_count} Pokemon from generation #{gen}."}
     end
   end
 
-  defp ingest_pokemon_by_ids(ids) do
+  defp ingest_pokemon_by_ids(ids, gen) do
     ids
-    |> Task.async_stream(&process_pokemon_id/1, ordered: true)
+    |> Task.async_stream(
+      fn id -> process_pokemon_id(id, gen) end,
+      timeout: 10_000
+    )
     |> Enum.count(&match?({:ok, :ok}, &1))
   end
 
-  defp process_pokemon_id(id) do
+  defp process_pokemon_id(id, gen) do
     with {:ok, pokemon} <- Client.get_pokemon_by_id(id),
-         {:ok, _} <- insert_pokemon(pokemon) do
+         {:ok, _} <- insert_pokemon(Map.merge(pokemon, %{"generation" => gen})) do
       :ok
     else
       error ->

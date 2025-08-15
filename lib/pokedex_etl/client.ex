@@ -37,7 +37,6 @@ defmodule PokedexETL.Client do
               special_attack: specialAttack
               special_defense: specialDefense
               speed
-              total
           }
       }
     }
