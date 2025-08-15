@@ -44,11 +44,15 @@ defmodule PokedexETL.Client do
   """
 
   def get_pokemon_by_id(id) do
-    with {:ok, %Neuron.Response{body: %{"data" => data}}} <-
-           Neuron.query(@query, %{id: id}, url: Application.get_env(:pokedex_etl, :client_url)) do
-      {:ok, data["pokemon"]}
+    with {:ok, %Neuron.Response{body: %{"data" => %{"pokemon" => pokemon}}}} <-
+           Neuron.query(@query, %{id: id}) do
+      {:ok, pokemon}
     else
-      _ -> {:error, :not_found}
+      {_, %Neuron.Response{body: %{"data" => %{"pokemon" => nil}}}} ->
+        {:error, :not_found}
+
+      {:error, _} ->
+        {:error, :request_failed}
     end
   end
 end

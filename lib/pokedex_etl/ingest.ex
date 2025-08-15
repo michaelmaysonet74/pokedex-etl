@@ -1,5 +1,7 @@
 defmodule PokedexETL.Ingest do
   alias PokedexETL.Client
+  alias PokedexETL.Repo
+  alias PokedexSchema.Pokemon
 
   @generations %{
     "1" => 1..151,
@@ -18,13 +20,34 @@ defmodule PokedexETL.Ingest do
       nil ->
         {:error, :invalid_input}
 
-      generation ->
-        result = generation |> Task.async_stream(&fetch_and_insert_pokemon/1) |> Enum.count()
-        {:ok, "Inserted #{result} Pokemon from generation #{gen}."}
+      gen_range ->
+        inserted_count = fetch_and_insert_pokemon(gen_range)
+        {:ok, "Inserted #{inserted_count} Pokemon from generation #{gen}."}
     end
   end
 
-  defp fetch_and_insert_pokemon(id) do
-    Client.get_pokemon_by_id(id) |> IO.inspect()
+  defp fetch_and_insert_pokemon(gen_range) do
+    gen_range
+    |> Task.async_stream(
+      fn id ->
+        with {:ok, pokemon} <- Client.get_pokemon_by_id(id),
+             {:ok, _} <- insert_pokemon(pokemon) do
+          :ok
+        else
+          error ->
+            IO.warn("Failed to insert Pokémon #{id}: #{inspect(error)}")
+            :error
+        end
+      end,
+      ordered: true
+    )
+    |> Enum.frequencies()
+    |> Map.get(:ok, 0)
+  end
+
+  defp insert_pokemon(pokemon) do
+    %Pokemon{}
+    |> Pokemon.changeset(pokemon)
+    |> Repo.insert()
   end
 end

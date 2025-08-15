@@ -1,4 +1,4 @@
-defmodule PokedexETL.CLI do
+defmodule PokedexETL do
   alias PokedexETL.Ingest
 
   def main(args) do
