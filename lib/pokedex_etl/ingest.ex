@@ -1,4 +1,5 @@
 defmodule PokedexETL.Ingest do
+  require Logger
   alias PokedexETL.Client
   alias PokedexETL.Repo
   alias PokedexSchema.Pokemon
@@ -20,29 +21,27 @@ defmodule PokedexETL.Ingest do
       nil ->
         {:error, :invalid_input}
 
-      gen_range ->
-        inserted_count = fetch_and_insert_pokemon(gen_range)
+      ids ->
+        inserted_count = ingest_pokemon_by_ids(ids)
         {:ok, "Inserted #{inserted_count} Pokemon from generation #{gen}."}
     end
   end
 
-  defp fetch_and_insert_pokemon(gen_range) do
-    gen_range
-    |> Task.async_stream(
-      fn id ->
-        with {:ok, pokemon} <- Client.get_pokemon_by_id(id),
-             {:ok, _} <- insert_pokemon(pokemon) do
-          :ok
-        else
-          error ->
-            IO.warn("Failed to insert Pokémon #{id}: #{inspect(error)}")
-            :error
-        end
-      end,
-      ordered: true
-    )
-    |> Enum.frequencies()
-    |> Map.get(:ok, 0)
+  defp ingest_pokemon_by_ids(ids) do
+    ids
+    |> Task.async_stream(&process_pokemon_id/1, ordered: true)
+    |> Enum.count(&match?({:ok, :ok}, &1))
+  end
+
+  defp process_pokemon_id(id) do
+    with {:ok, pokemon} <- Client.get_pokemon_by_id(id),
+         {:ok, _} <- insert_pokemon(pokemon) do
+      :ok
+    else
+      error ->
+        Logger.error("Failed to insert Pokémon #{id}: #{inspect(error)}")
+        :error
+    end
   end
 
   defp insert_pokemon(pokemon) do
