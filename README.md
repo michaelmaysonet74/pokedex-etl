@@ -1,6 +1,6 @@
 # pokedex-etl
 
-Command-line tool that extracts Pokémon data from (pokedex-gql)[https://github.com/michaelmaysonet74/pokedex-gql], transforms it for consistency, and loads it into a PostgreSQL database.
+Command-line tool that extracts Pokémon data from [pokedex-gql](https://github.com/michaelmaysonet74/pokedex-gql), transforms it for consistency, and loads it into a PostgreSQL database.
 
 ## Getting Started
 
