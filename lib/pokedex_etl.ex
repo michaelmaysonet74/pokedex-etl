@@ -1,4 +1,4 @@
-defmodule PokedexETL.CLI do
+defmodule PokedexETL do
   alias PokedexETL.Ingest
 
   def main(args) do
@@ -17,8 +17,6 @@ defmodule PokedexETL.CLI do
 
       {:error, :invalid_input} ->
         IO.puts("Invalid Input: --gen=#{gen}")
-
-        # _ -> IO.puts("Oops, something went wrong! 💔")
     end
   end
 

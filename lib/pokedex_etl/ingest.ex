@@ -1,5 +1,17 @@
 defmodule PokedexETL.Ingest do
   alias PokedexETL.Client
+  alias PokedexETL.Repo
+  alias PokedexSchema.Pokemon
+
+  require Logger
+
+  @async_opts [
+    max_concurrency: 5,
+    ordered: true,
+    timeout: :infinity
+  ]
+
+  @batch_size 25
 
   @generations %{
     "1" => 1..151,
@@ -13,18 +25,43 @@ defmodule PokedexETL.Ingest do
     "9" => 906..1025
   }
 
-  def run(gen) do
-    case @generations[gen] do
-      nil ->
-        {:error, :invalid_input}
+  def run(gen) when is_map_key(@generations, gen) do
+    @generations[gen]
+    |> Enum.chunk_every(@batch_size)
+    |> Enum.each(fn batch -> process_batch(batch, gen) end)
 
-      generation ->
-        result = generation |> Task.async_stream(&fetch_and_insert_pokemon/1) |> Enum.count()
-        {:ok, "Inserted #{result} Pokemon from generation #{gen}."}
-    end
+    {:ok, "Done"}
   end
 
-  defp fetch_and_insert_pokemon(id) do
-    Client.get_pokemon_by_id(id) |> IO.inspect()
+  def run(_), do: {:error, :invalid_input}
+
+  defp process_batch(batch, gen) do
+    batch
+    |> Task.async_stream(
+      fn id ->
+        with {:ok, pokemon} <- extract(id),
+             {:ok, updated_pokemon} <- transform(pokemon, gen),
+             _ <- load(updated_pokemon),
+             do: :ok
+      end,
+      @async_opts
+    )
+    |> Stream.run()
   end
+
+  defp extract(id), do: Client.get_pokemon_by_id(id)
+
+  defp transform(pokemon, gen) do
+    evolution = pokemon["evolution"] || %{}
+
+    updated_evolution =
+      Map.merge(evolution, %{
+        "from" => evolution["from"] || %{},
+        "to" => evolution["to"] || []
+      })
+
+    {:ok, Map.merge(pokemon, %{"evolution" => updated_evolution, "generation" => gen})}
+  end
+
+  defp load(pokemon), do: %Pokemon{} |> Pokemon.changeset(pokemon) |> Repo.insert()
 end

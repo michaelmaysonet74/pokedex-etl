@@ -6,7 +6,7 @@ defmodule PokedexETL.MixProject do
       app: :pokedex_etl,
       version: "0.1.0",
       elixir: "~> 1.18",
-      escript: [main_module: PokedexETL.CLI],
+      escript: escript(),
       deps: deps()
     ]
   end
@@ -25,7 +25,11 @@ defmodule PokedexETL.MixProject do
       {:neuron, "~> 5.1"},
       {:jason, "~> 1.4"},
       {:pokedex_schema,
-       git: "https://github.com/michaelmaysonet74/pokedex-schema.git", tag: "v0.1.0"}
+       git: "https://github.com/michaelmaysonet74/pokedex-schema.git", tag: "v0.2.0"}
     ]
+  end
+
+  defp escript do
+    [main_module: PokedexETL]
   end
 end
