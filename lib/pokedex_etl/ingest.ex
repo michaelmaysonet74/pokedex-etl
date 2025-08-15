@@ -1,8 +1,17 @@
 defmodule PokedexETL.Ingest do
-  require Logger
   alias PokedexETL.Client
   alias PokedexETL.Repo
   alias PokedexSchema.Pokemon
+
+  require Logger
+
+  @async_opts [
+    max_concurrency: 5,
+    ordered: true,
+    timeout: :infinity
+  ]
+
+  @batch_size 25
 
   @generations %{
     "1" => 1..151,
@@ -16,40 +25,43 @@ defmodule PokedexETL.Ingest do
     "9" => 906..1025
   }
 
-  def run(gen) do
-    case @generations[gen] do
-      nil ->
-        {:error, :invalid_input}
+  def run(gen) when is_map_key(@generations, gen) do
+    @generations[gen]
+    |> Enum.chunk_every(@batch_size)
+    |> Enum.each(fn batch -> process_batch(batch, gen) end)
 
-      ids ->
-        inserted_count = ingest_pokemon_by_ids(ids, gen)
-        {:ok, "Inserted #{inserted_count} Pokemon from generation #{gen}."}
-    end
+    {:ok, "Done"}
   end
 
-  defp ingest_pokemon_by_ids(ids, gen) do
-    ids
+  def run(_), do: {:error, :invalid_input}
+
+  defp process_batch(batch, gen) do
+    batch
     |> Task.async_stream(
-      fn id -> process_pokemon_id(id, gen) end,
-      timeout: 10_000
+      fn id ->
+        with {:ok, pokemon} <- extract(id),
+             {:ok, updated_pokemon} <- transform(pokemon, gen),
+             _ <- load(updated_pokemon),
+             do: :ok
+      end,
+      @async_opts
     )
-    |> Enum.count(&match?({:ok, :ok}, &1))
+    |> Stream.run()
   end
 
-  defp process_pokemon_id(id, gen) do
-    with {:ok, pokemon} <- Client.get_pokemon_by_id(id),
-         {:ok, _} <- insert_pokemon(Map.merge(pokemon, %{"generation" => gen})) do
-      :ok
-    else
-      error ->
-        Logger.error("Failed to insert Pokémon #{id}: #{inspect(error)}")
-        :error
-    end
+  defp extract(id), do: Client.get_pokemon_by_id(id)
+
+  defp transform(pokemon, gen) do
+    evolution = pokemon["evolution"] || %{}
+
+    updated_evolution =
+      Map.merge(evolution, %{
+        "from" => evolution["from"] || %{},
+        "to" => evolution["to"] || []
+      })
+
+    {:ok, Map.merge(pokemon, %{"evolution" => updated_evolution, "generation" => gen})}
   end
 
-  defp insert_pokemon(pokemon) do
-    %Pokemon{}
-    |> Pokemon.changeset(pokemon)
-    |> Repo.insert()
-  end
+  defp load(pokemon), do: %Pokemon{} |> Pokemon.changeset(pokemon) |> Repo.insert()
 end

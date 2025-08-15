@@ -25,7 +25,7 @@ defmodule PokedexETL.MixProject do
       {:neuron, "~> 5.1"},
       {:jason, "~> 1.4"},
       {:pokedex_schema,
-       git: "https://github.com/michaelmaysonet74/pokedex-schema.git", tag: "v0.1.0"}
+       git: "https://github.com/michaelmaysonet74/pokedex-schema.git", tag: "v0.2.0"}
     ]
   end
 

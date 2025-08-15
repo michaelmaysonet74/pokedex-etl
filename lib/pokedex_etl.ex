@@ -17,8 +17,6 @@ defmodule PokedexETL do
 
       {:error, :invalid_input} ->
         IO.puts("Invalid Input: --gen=#{gen}")
-
-        # _ -> IO.puts("Oops, something went wrong! 💔")
     end
   end
 
