@@ -50,8 +50,8 @@ defmodule PokedexETL.Client do
   ]
 
   def get_pokemon_by_id(id) do
-    with {:ok, %Neuron.Response{body: %{"data" => %{"pokemon" => pokemon}}}} <-
-           Neuron.query(@query, %{id: id}, @query_opts) do
+    with {:ok, %Neuron.Response{body: %{"data" => %{"pokemon" => pokemon}}}}
+         when not is_nil(pokemon) <- Neuron.query(@query, %{id: id}, @query_opts) do
       {:ok, pokemon}
     else
       {_, %Neuron.Response{body: %{"data" => %{"pokemon" => nil}}}} ->
