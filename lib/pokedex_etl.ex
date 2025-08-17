@@ -1,22 +1,17 @@
 defmodule PokedexETL do
   alias PokedexETL.Ingest
 
-  def main(args) do
+  def main(["ingest", "--gen=" <> gen]) do
     Application.ensure_all_started(:pokedex_etl)
-
-    case args do
-      ["ingest", "--gen=" <> gen] -> ingest(gen)
-      _ -> usage()
-    end
+    ingest(gen)
   end
+
+  def main(_), do: usage()
 
   defp ingest(gen) do
     case Ingest.run(gen) do
-      {:ok, result} ->
-        IO.puts(result)
-
-      {:error, :invalid_input} ->
-        IO.puts("Invalid Input: --gen=#{gen}")
+      {:ok, result} -> IO.puts(result)
+      _ -> IO.puts("Invalid Input: --gen=#{gen}")
     end
   end
 
